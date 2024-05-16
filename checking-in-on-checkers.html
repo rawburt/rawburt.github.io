@@ -1,0 +1,1510 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Robert Peterson</title>
+  <link rel="stylesheet" type="text/css" media="screen" href="style.css">
+</head>
+
+<body>
+  <header>
+    <pre>
+____   ___   ____     ___  ____  ______      ____   ___ ______    ___  ____    _____  ___   ____
+|    \ /   \ |    \   /  _]|    \|      |    |    \ /  _]      |  /  _]|    \  / ___/ /   \ |    \
+|  D  )     ||  o  ) /  [_ |  D  )      |    |  o  )  [_|      | /  [_ |  D  )(   \_ |     ||  _  |
+|    /|  O  ||     ||    _]|    /|_|  |_|    |   _/    _]_|  |_||    _]|    /  \__  ||  O  ||  |  |
+|    \|     ||  O  ||   [_ |    \  |  |      |  | |   [_  |  |  |   [_ |    \  /  \ ||     ||  |  |
+|  .  \     ||     ||     ||  .  \ |  |      |  | |     | |  |  |     ||  .  \ \    ||     ||  |  |
+|__|\_|\___/ |_____||_____||__|\_| |__|      |__| |_____| |__|  |_____||__|\_|  \___| \___/ |__|__|
+    </pre>
+    <nav>
+      [ <a href="/index.html">articles</a> ]
+      .
+      [ <a href="https://github.com/rawburt">github</a> ]
+      .
+      [ <a href="https://www.linkedin.com/in/robertp42/">linkedin</a> ]
+    </nav>
+  </header>
+  <main>
+    <h1>Checking in on Checkers</h1>
+    <article>
+      <h2>1. Introduction</h2>
+      <p>
+        There are many features and optimizations that can make the Minimax algorithm faster at identifying valid moves
+        and more successful at finding winning moves. The purpose of this paper is to explore some of those features and
+        optimizations in order to understand their impact on a Checkers engine. I did this by building a Checkers engine
+        using Alpha-Beta pruning, transposition tables, and quiescence search. I then evaluated the success of my design
+        and implementation decisions by experimenting with different configuration options and comparing their results.
+        Ultimately, I was able to conclude that the evaluation function is the most important aspect of the Minimax
+        algorithm for winning a game, Alpha-Beta pruning and transposition tables offer the best search optimization to
+        the Minimax algorithm, and the underlying data structure for representing the game board state has the highest
+        impact on the performance of move generation and the evaluation function.
+      </p>
+    </article>
+
+    <article>
+      <h2>2. Background</h2>
+      <article>
+        <h3>2.1 Checkers</h3>
+        <p>
+          Checkers is a board game that is played on an 8x8 grid by two players. Each player starts the game with 12
+          "pawn" pieces. Pawns move towards the player's opponent diagonally one square at a time. A pawn may only
+          occupy
+          an unoccupied square. If a pawn makes it to the other side of the board then it is promoted to a "king". A
+          king
+          may move diagonally in any direction. If a king or a pawn wishes to make a move towards a square but the
+          square
+          is occupied by an opponent, and the square immediately beyond it in the same diagonal direction is unoccupied,
+          then the moving piece may "capture" the opponent piece by removing it from the board. The player will then
+          move
+          their piece to the square immediately beyond the square of the capture piece. A game is over when a player
+          captures all of their opponents pieces. For the purposes of this paper, a draw is defined as 20 moves from
+          each
+          player (40 total) without a promotion or a capture. More details about the rules of Checkers can be found on
+          the
+          International Draughts Federation website [11].
+        </p>
+      </article>
+      <article>
+        <h3>2.2 Checkers Engines</h3>
+        <p>
+          A Checkers engine is a computer program that is capable of playing the game of Checkers. The first Checkers
+          engine to become World Champion by beating the best human player of Checkers was the Chinook Checkers engine.
+          Chinook was developed by a team of researchers at the University of Alberta, and the team was led by Jonathan
+          Schaeffer [1]. More recently, the best playing Checkers engines are the KingsRow engine by Ed Gilbert [4] and
+          the Cake engine by Martin Fierz [2]. All three engines use some form of the Minimax search algorithm to help
+          the
+          engine find a winning move that can lead to a win against their opponent.
+        </p>
+      </article>
+      <article>
+        <h3>2.3 Minimax</h3>
+        <p>
+          The Minimax search algorithm relies on the fact that in an adversarial game like Checkers, a winning move for
+          a
+          player is an equally losing move for the opponent. At the heart of the algorithm is an evaluation function
+          that
+          determines how likely a given player is to win the game based on the layout of the pieces. The Chinook
+          Checkers
+          engine uses a hand-tuned evaluation function that was constructed over much trial and error. The KingsRow and
+          Cake Checkers engine adopted Machine Learning constructed evaluation functions which outperformed their
+          hand-tuned predecessors [3].
+        </p>
+      </article>
+    </article>
+
+    <article>
+      <h2>3. Design and Implementation</h2>
+      <article>
+        <h3>3.1 Language</h3>
+        <p>
+          The engine is implemented in the Rust programming language. Rust is a statically typed programming language
+          with
+          memory safety. The type system in Rust is very strong which allows for modeling complex data structures in
+          compiler-checked abstractions. The strength of the type system and support for unit testing makes Rust a great
+          language for complex software like a Checkers engine because the compiler will help notify you of errors
+          before
+          they happen at runtime. This lets you focus more on the bugs created from logical errors and not bugs created
+          from typos.
+        </p>
+      </article>
+      <article>
+        <h3>3.2 Features and Optimizations</h3>
+        <p>
+          To explore the impact of changing features and optimizations to the Minimax algorithm, the Checkers engine I
+          made is constructed to have the ability to run the Minimax algorithm in different states of configuration.
+          Each
+          feature or optimizations may be enabled or disabled. This allowed for greater flexibility when devising
+          configurations to test for performance and ability to win.
+        </p>
+      </article>
+      <article>
+        <h3>3.3 Board Game</h3>
+        <p>
+          I created the Checkers board using a 46 element array [7]. Figure 1 is a visualization of the array indexes
+          and
+          their relationship to the playable diagonals of a Checkers board.
+        </p>
+        <figure>
+          <pre>
+  37  38  39  40
+32  33  34  35
+  28  29  30  31
+23  24  25  26
+  19  20  21  22
+14  15  16  17
+  10  11  12  13
+05  06  07  08</pre>
+          <figcaption>Figure 1: Padded array indexes for Checkers board diagonals.</figcaption>
+        </figure>
+        <p>
+          The padded array is used in this layout because diagonal moves can be calculated by using simple addition or
+          subtraction without the need to check for array index bounds. For example, to check the surrounding squares
+          for
+          any given square position i, all that is required is to check i+4, i-4, i+5, and i-5.
+        </p>
+      </article>
+      <article>
+        <h3>3.4 Move Generation</h3>
+        <p>
+          Move generation is split into two phases. The first phase searches for capture moves. The rules of Checkers
+          require the player to capture a piece if a capture is available. Therefore, these moves are generated first.
+          If
+          a capture exists, then the second phase of move generation is ignored. The second phase searches for single
+          square movements (or, non-capturing moves).
+        </p>
+      </article>
+      <article>
+        <h3>3.5 Evaluation Function</h3>
+        <p>
+          An evaluation function takes as input the current state of the board and the current player searching for
+          their
+          next move. The function output is a signed integer which represents the ability to win given the player's
+          pieces
+          on the board. The engine I created can be configured to run one of three different evaluation functions.
+          The first evaluation function (named v1) is the simplest. The pawns and kings for each player are summed
+          separately. The result of the evaluation function is then:
+          (MY_PAWNS - YOUR_PAWNS) + (3 * (MY_KINGS - YOUR_KINGS))
+        </p>
+        <p>The second evaluation function (named v2) is a linear combination of 8 terms. Refer to the source code for a
+          more thorough detail of the terms and their coefficients [9].</p>
+        <p>
+          The third evaluation function (named v3) is a partial implementation of the evaluation function described by
+          Arthur L. Samuel in his paper "Some Studies in Machine Learning Using the Game of Checkers" [14].
+        </p>
+      </article>
+      <article>
+        <h3>3.6 Negamax</h3>
+        <p>
+          Negamax is a simplification of Minimax and can be used as an easier to implement alternative to Minimax for a
+          zero-sum game like Checkers. Because of this, the core algorithm used in my engine is Negamax, and the various
+          features and optimization options of the engine are used to improve the base Negamax algorithm [5].
+        </p>
+        <figure>
+          <pre>
+function negamax(board, player, depth) is
+  moves <- board.movements(player)
+  if moves.length() == 0 || depth == 0 then
+    return evaluation(board, player)
+  value <- -Infinity
+  move <- None
+  for m in moves do
+    board.do_move(m)
+    score <- negamax(board, player.other_player(), depth - 1)
+    if score > value then
+      value <- score
+      move <- m
+  return (value, move)
+
+function getMove(board, player) is
+  (score, move) <- negamax(board, player, depth)
+  return move</pre>
+          Figure 2: The engine's Negamax pseudocode.
+        </figure>
+      </article>
+      <article>
+        <h3>3.7 Alpha-Beta Pruning</h3>
+        <p>
+          Alpha-Beta pruning has the same result as Negamax, but it ignores branches of the search that do not influence
+          the result of the search [12]. This reduces the search space which has the effect of the search running much
+          faster than the base Negamax algorithm.
+        </p>
+        <figure>
+          <pre>
+function negamax(board, player, depth, alpha, beta) is
+  moves <- board.movements(player)
+  if moves.length() == 0 || depth == 0 then
+    return evaluation(board, player)
+  value <- -Infinity
+  move <- None
+  for m in moves do
+    board.do_move(m)
+    score <- negamax(board, player.other_player(), depth - 1, -beta, -alpha)
+    if score > value then
+      value <- score
+      move <- m
+      if value >= beta then
+        break
+    if alpha < value then
+      alpha <- value
+  return (value, move)
+
+function getMove(board, player) is
+  (score, move) <- negamax(board, player, depth, MIN, MAX)
+  return move</pre>
+          Figure 3: The engine's Alpha-Beta pruning pseudocode.
+        </figure>
+      </article>
+      <article>
+        <h3>3.8 Transposition Table</h3>
+        <p>
+          A transposition table allows previous board evaluations to be stored and reused, and thus eliminates the need
+          to
+          evaluate the same board position multiple times, further improving the time efficiency. A previous evaluation
+          is
+          only reused if it was evaluated at a depth that is equal to or deeper than the current depth of the search. If
+          the evaluation was conducted at a shallower depth, the algorithm will try to reuse the evaluation calculation
+          to
+          narrow the search window [8].
+        </p>
+        <p>
+          Transposition table usage is a feature that can be toggled on or off in the engine. When the transposition
+          table
+          feature is enabled, then the Alpha-Beta pruning feature is also enabled by default.
+        </p>
+        <figure>
+          <pre>
+function negamax(board, player, depth, alpha, beta) is
+  alpha_orig <- alpha
+  moves <- board.movements(player)
+  if moves.length() == 0 || depth == 0 then
+    return evaluation(board, player)
+  entry <- ttable.get(board)
+  if entry then
+    if entry.depth >= depth then
+      case entry.flag
+      when Exact then
+        return (entry.score, entry.movement)
+      when Lowerbound then
+        alpha <- max(alpha, entry.score)
+      when Upperbound then
+        beta <- min(beta, entry.score)
+    if alpha >= beta then
+      return (entry.score, entry.movement)
+  ### (rest of normal negamax function body here) ###
+  entry <- ttable.new_entry()
+  entry.score <- value
+  if value <= alpha_orig then
+    entry.flag <- Upperbound
+  elseif value >= beta then
+    entry.flag <- Lowerbound
+  else
+    entry.flag <- Exact
+  ttable.insert(board, entry)
+  return (value, move)</pre>
+          Figure 3: The engine's transposition table pseudocode.
+        </figure>
+        <p>
+          A hash table is used to store the previous board evaluations. The hash algorithm used in the engine is the
+          Zobrist hash algorithm [17]. This algorithm has great properties for board games as the hash can be updated
+          during every state change (or player move). Given this property, when a transposition table lookup is
+          required,
+          the board's hash is already computed.
+        </p>
+      </article>
+      <article>
+        <h3>3.9 Quiescence Search</h3>
+        <p>
+          The horizon effect is when the search algorithm hits the end of its search, either by reaching a depth limit
+          or
+          some terminal state, but there exists a move just beyond the search limit that would greatly influence the
+          state
+          of the game. By stopping the search before this game-changing move, the resulting evaluation may give wildly
+          inaccurate results. Quiescence search is used to mitigate the horizon effect [8].
+          In the engine there is a very basic quiescence search feature that can be toggled on or off. When enabled, if
+          the search algorithm would otherwise stop, instead it looks at the next set of moves. If the moves are capture
+          moves, then the search continues for at least one more iteration.
+        </p>
+        <figure>
+          <pre>
+function negamax(board, player, depth, alpha, beta) is
+  moves <- board.movements(player)
+  if depth == 0 && moves.first().is_jump() then
+    depth <- 1
+  ### (rest of normal negamax function body here) ###</pre>
+          <figcaption>Figure 5: The engine's quiescence search pseudocode.</figcaption>
+        </figure>
+      </article>
+    </article>
+
+    <article>
+      <h2>4. Evaluation</h2>
+      <article>
+        <h2>4.1 Description of Technique</h2>
+        <p>
+          I created a "Random Opponent" to select random moves from a list of valid moves. This opponent is used to run
+          tests in order to have a simple baseline to compare the various engine features and optimizations against.
+          The engine is capable of reporting a few metrics by outputting data to the terminal. For each player after
+          each
+          game is played:
+        </p>
+        <p>
+        <ul>
+          <li>Moves - how many moves each player played.</li>
+          <li>Explored - the total amount of moves explored in the search.</li>
+          <li>Beta Cuts - the total times that Alpha-Beta pruning ended a search early.</li>
+          <li>TT Exact - the total times that the Transposition Table used an exact match and ended a search early.</li>
+          <li> TT Cuts - the total times that the Transposition Table was used to do Alpha-Beta pruning and ended a
+            search
+            early.</li>
+          <li>Max Depth - the deepest level of search that happened at any point.</li>
+        </ul>
+        </p>
+        <p>
+          The engine can play multiple games and report the above metrics for each game to the terminal. I wrote a
+          script
+          that can accept the output of the Checkers engine and compute the averages of the game metrics [9].
+          Additionally, I used the macOS tool Instrument to profile debug builds of the engine in order to see how much
+          time
+          was spent in various parts of the code. I also used the Hyperfine command-line tool to profile the run-time of
+          release builds of the engine in order to compare the impact of the various engine optimizations.
+          In following analysis subsections, I use a shorthand to represent the various engine configurations that were
+          tested:
+        </p>
+        <p>
+        <ul>
+          <li>D - This represents the configured max depth to search. For example, D=6 means the search will stop at
+            depth 6.</li>
+          <li>E - This represents the configured evaluation function to use in the search. For example, E=2 means that
+            the v2
+            evaluation function will be used.</li>
+          <li>AB - This means the Alpha-Beta Pruning feature is enabled.</li>
+          <li>Q - This means the Quiescence Search feature is enabled.</li>
+          <li>TT - This means the Transposition Table feature is enabled.</li>
+        </ul>
+        </p>
+        <p>
+          For a full example, consider the configuration "AB, TT, Q, D=6, E=2". This configuration has Alpha-Beta
+          Pruning,
+          Transposition Table, and Quiescence Search enabled. The max depth is set to 6, and the v2 evaluation function
+          is
+          used.
+        </p>
+      </article>
+      <article>
+        <h2>4.2 Playing Against a Random Opponent</h2>
+
+        <figure>
+          <table>
+            <tr>
+              <td></td>
+              <th>Wins</th>
+              <th>Losses</th>
+              <th>Draws</th>
+              <th>Moves</th>
+              <th>Explored</th>
+              <th>Beta Cuts</th>
+              <th>TT Exact</th>
+              <th>TT Cuts</th>
+              <th>Max Depth</th>
+              <th>Time (ms)</th>
+              <th>Time / Move (ms)</th>
+            </tr>
+            <tr>
+              <th>D=6, E=1</th>
+              <td>94</td>
+              <td class="highlight-red">2</td>
+              <td class="highlight-red">4</td>
+              <td class="highlight-red">26.35</td>
+              <td>539302.27</td>
+              <td>0</td>
+              <td>0</td>
+              <td>0</td>
+              <td>6</td>
+              <td>158.8</td>
+              <td>6.027</td>
+            </tr>
+            <tr>
+              <th>AB, D=6, E=1</th>
+              <td>99</td>
+              <td>1</td>
+              <td>0</td>
+              <td>23.82</td>
+              <td>21769.06</td>
+              <td>6719.53</td>
+              <td>0</td>
+              <td>0</td>
+              <td>6</td>
+              <td>7.8</td>
+              <td>0.327</td>
+            </tr>
+            <tr>
+              <th>AB, Q, D=6, E=1</th>
+              <td>100</td>
+              <td>0</td>
+              <td>0</td>
+              <td>23.54</td>
+              <td>33887.3</td>
+              <td>12456</td>
+              <td>0</td>
+              <td>0</td>
+              <td>12.79</td>
+              <td>11.175</td>
+              <td>0.475</td>
+            </tr>
+            <tr>
+              <th>AB, TT, D=6, E=1</th>
+              <td>99</td>
+              <td>1</td>
+              <td>0</td>
+              <td>23</td>
+              <td>16289.16</td>
+              <td>4639.19</td>
+              <td>40.5</td>
+              <td>963.95</td>
+              <td>6</td>
+              <td>6.55</td>
+              <td class="highlight-green">0.285</td>
+            </tr>
+            <tr>
+              <th>AB, TT, Q, D=6, E=1</th>
+              <td>100</td>
+              <td>0</td>
+              <td>0</td>
+              <td>23.18</td>
+              <td>25498.48</td>
+              <td>8898.48</td>
+              <td>75.51</td>
+              <td>1351.32</td>
+              <td>12.98</td>
+              <td>11.05</td>
+              <td>0.477</td>
+            </tr>
+            <tr>
+              <th>D=6, E=2</th>
+              <td>100</td>
+              <td>0</td>
+              <td>0</td>
+              <td>23.06</td>
+              <td>739759.88</td>
+              <td>0</td>
+              <td>0</td>
+              <td>0</td>
+              <td>6</td>
+              <td>247.2</td>
+              <td>10.720</td>
+            </tr>
+            <tr>
+              <th>AB, D=6, E=2</th>
+              <td>100</td>
+              <td>0</td>
+              <td>0</td>
+              <td>23.51</td>
+              <td>52863.75</td>
+              <td>15491.52</td>
+              <td>0</td>
+              <td>0</td>
+              <td>6</td>
+              <td>16.1</td>
+              <td>0.685</td>
+            </tr>
+            <tr>
+              <th>AB, Q, D=6, E=2</th>
+              <td>100</td>
+              <td>0</td>
+              <td>0</td>
+              <td>22.59</td>
+              <td>92590.41</td>
+              <td>34328.23</td>
+              <td>0</td>
+              <td>0</td>
+              <td>13.61</td>
+              <td>33.045</td>
+              <td>1.463</td>
+            </tr>
+            <tr>
+              <th>AB, TT, D=6, E=2</th>
+              <td>100</td>
+              <td>0</td>
+              <td>0</td>
+              <td>22.58</td>
+              <td>38329.47</td>
+              <td>10476.31</td>
+              <td>220.08</td>
+              <td>2440.82</td>
+              <td>6</td>
+              <td>16.65</td>
+              <td>0.737</td>
+            </tr>
+            <tr>
+              <th>AB, TT, Q, D=6, E=2</th>
+              <td>100</td>
+              <td>0</td>
+              <td>0</td>
+              <td>22.95</td>
+              <td>64996.25</td>
+              <td>22217.23</td>
+              <td>459.05</td>
+              <td>3885.71</td>
+              <td>13.58</td>
+              <td>29.05</td>
+              <td>1.266</td>
+            </tr>
+            <tr>
+
+              <th>D=6, E=3</th>
+              <td>100</td>
+              <td>0</td>
+              <td>0</td>
+              <td>22.23</td>
+              <td>697504.8</td>
+              <td>0</td>
+              <td>0</td>
+              <td>0</td>
+              <td>6</td>
+              <td>391.8</td>
+              <td class="highlight-red">17.625</td>
+            </tr>
+            <tr>
+
+              <th>AB, D=6, E=3</th>
+              <td>100</td>
+              <td>0</td>
+              <td>0</td>
+              <td>22.08</td>
+              <td>99053.11</td>
+              <td>22213</td>
+              <td>0</td>
+              <td>0</td>
+              <td>6</td>
+              <td>47.275</td>
+              <td class="highlight-purple">2.141</td>
+            </tr>
+            <tr>
+
+              <th>AB, Q, D=6, E=3</th>
+              <td>100</td>
+              <td>0</td>
+              <td>0</td>
+              <td>22.73</td>
+              <td>155283.8</td>
+              <td>54617.9</td>
+              <td>0</td>
+              <td>0</td>
+              <td>13.87</td>
+              <td>72.65</td>
+              <td>3.196</td>
+            </tr>
+            <tr>
+
+              <th>AB, TT, D=6, E=3</th>
+              <td>100</td>
+              <td>0</td>
+              <td>0</td>
+              <td>22.5</td>
+              <td>65656.5</td>
+              <td>14374.71</td>
+              <td>732.36</td>
+              <td>3434.82</td>
+              <td>6</td>
+              <td>38.325</td>
+              <td class="highlight-purple">1.703</td>
+            </tr>
+            <tr>
+              <th>AB, TT, Q, D=6, E=3</th>
+              <td>100</td>
+              <td>0</td>
+              <td>0</td>
+              <td class="highlight-green">22.2</td>
+              <td>91179.61</td>
+              <td>30212.89</td>
+              <td>859.35</td>
+              <td>4883.83</td>
+              <td class="highlight-green">13.96</td>
+              <td>53.1</td>
+              <td>2.392</td>
+            </tr>
+          </table>
+          <figcaption>Table 1: Engine configurations against the Random Opponent.</figcaption>
+        </figure>
+        <p>
+          Marked in <span class="highlight-red">red</span>, "D=6, E=1" performs the worst against the Random Opponent in terms of its ability to win games.
+          This configuration also requires the most moves to finish a game.
+        </p>
+        <p>
+          Marked in <span class="highlight-red">red</span>, "D=6, E=3" takes the most time to select a move. Other baseline engine configurations ("D=6,
+          E=1"
+          and "D=6, E=2") are very slow at move selection. The evaluation functions have a big impact on the time it
+          takes
+          to pick a move.
+        </p>
+        <p>
+          Marked in <span class="highlight-green">green</span>, "AB, TT, D=6, E=1" is the fastest at selecting a move. However, the configuration lost a game
+          against a Random Opponent, so it is not a very good configuration with regards to winning games.
+        </p>
+        <p>Marked in <span class="highlight-green">green</span>, "AB, TT, Q, D=6, E=3" requires the least amount of moves to win a game. This configuration
+          also
+          searches the deepest and utilizes the best evaluation function.</p>
+        <p>
+          Marked in <span class="highlight-purple">purple</span>, "AB, D=6, E=3" compared to "AB, TT, D=6, E=3" is the first time we see a Transposition Table
+          configuration outperform its Alpha-Beta Pruning counterpart. The v3 evaluation function is the best at
+          determining
+          a good board position, but it also seems to be the slowest. The caching of results in the Transposition Table
+          helps to avoid the costly evaluation function.
+        </p>
+        <figure>
+          <table>
+            <tr>
+              <th>Configuration</th>
+              <th>% of Run Time</th>
+              <th>Function Call</th>
+              <td></td>
+              <th>Configuration</th>
+              <th>% of Run Time</th>
+              <th>Function Call</th>
+          </tr>
+          <tr>
+              <td>D=6, E=1</td>
+              <td>8.8%</td>
+              <td>memmove</td>
+              <td></td>
+              <td>D=6, E=3, Q</td>
+              <td>17.0%</td>
+              <td>minimax::evaluation3</td>
+          </tr>
+          <tr>
+              <td></td>
+              <td>7.5%</td>
+              <td>checkers::Board::jump_moves_at</td>
+              <td></td>
+              <td></td>
+              <td>11.0%</td>
+              <td>core..slice..iter</td>
+          </tr>
+          <tr>
+              <td></td>
+              <td>7.5%</td>
+              <td>checkers::Board::jump_moves</td>
+              <td></td>
+              <td></td>
+              <td>6.5%</td>
+              <td>memmove</td>
+          </tr>
+          <tr>
+              <td></td>
+              <td>6.3%</td>
+              <td>checkers::Board::simple_moves</td>
+              <td></td>
+              <td></td>
+              <td>5.3%</td>
+              <td>checkers::Board::jump_moves_at</td>
+          </tr>
+          <tr>
+              <td></td>
+              <td>3.8%</td>
+              <td>minimax::evaluation1</td>
+              <td></td>
+              <td></td>
+              <td>4.4%</td>
+              <td>checkers::Board::jump_moves</td>
+          </tr>
+          <tr>
+              <td></td>
+              <td></td>
+              <td></td>
+              <td></td>
+              <td></td>
+              <td>3.7%</td>
+              <td>checkers::Board::get</td>
+          </tr>
+          <tr>
+              <td></td>
+              <td></td>
+              <td></td>
+              <td></td>
+              <td></td>
+              <td>3.4%</td>
+              <td>checkers::Board::simple_moves</td>
+          </tr>
+          <tr>
+              <td></td>
+              <td></td>
+              <td></td>
+              <td></td>
+              <td></td>
+              <td></td>
+              <td></td>
+          </tr>
+          <tr>
+              <td>D=6, E=1, Q</td>
+              <td>8.8%</td>
+              <td>memmove</td>
+              <td></td>
+              <td>D=8, E=2</td>
+              <td>6.4%</td>
+              <td>checkers::Board::jump_moves_at</td>
+          </tr>
+          <tr>
+              <td></td>
+              <td>7.9%</td>
+              <td>core..slice..iter</td>
+              <td></td>
+              <td></td>
+              <td>6.4%</td>
+              <td>checkers::Board::jump_moves</td>
+          </tr>
+          <tr>
+              <td></td>
+              <td>7.0%</td>
+              <td>checkers::Board::jump_moves_at</td>
+              <td></td>
+              <td></td>
+              <td>5.6%</td>
+              <td>core..slice..iter</td>
+          </tr>
+          <tr>
+              <td></td>
+              <td>5.3%</td>
+              <td>checkers::Board::simple_moves</td>
+              <td></td>
+              <td></td>
+              <td>5.0%</td>
+              <td>checkers::Board::simple_moves</td>
+          </tr>
+          <tr>
+              <td></td>
+              <td>4.4%</td>
+              <td>core::option</td>
+              <td></td>
+              <td></td>
+              <td>4.9%</td>
+              <td>memmove</td>
+          </tr>
+          <tr>
+              <td></td>
+              <td>3.5%</td>
+              <td>core..array..iter</td>
+              <td></td>
+              <td></td>
+              <td>4.3%</td>
+              <td>minimax::evaluation2</td>
+          </tr>
+          <tr>
+              <td></td>
+              <td>3.5%</td>
+              <td>checkers::Board::jump_moves</td>
+              <td></td>
+              <td></td>
+              <td></td>
+              <td></td>
+          </tr>
+          <tr>
+              <td></td>
+              <td></td>
+              <td></td>
+              <td></td>
+              <td></td>
+              <td></td>
+              <td></td>
+          </tr>
+          <tr>
+              <td>D=6, E=2</td>
+              <td>8.6%</td>
+              <td>memmove</td>
+              <td></td>
+              <td>D=8, E=2, Q</td>
+              <td>7.0%</td>
+              <td>checkers::Board::jump_moves</td>
+          </tr>
+          <tr>
+              <td></td>
+              <td>7.1%</td>
+              <td>checkers::Board::jump_moves_at</td>
+              <td></td>
+              <td></td>
+              <td>6.5%</td>
+              <td>checkers::Board::jump_moves_at</td>
+          </tr>
+          <tr>
+              <td></td>
+              <td>5.7%</td>
+              <td>checkers::Board::simple_moves</td>
+              <td></td>
+              <td></td>
+              <td>6.0%</td>
+              <td>memmove</td>
+          </tr>
+          <tr>
+              <td></td>
+              <td>4.8%</td>
+              <td>core..slice..iter</td>
+              <td></td>
+              <td></td>
+              <td>5.4%</td>
+              <td>checkers::Board::simple_moves</td>
+          </tr>
+          <tr>
+              <td></td>
+              <td>4.8%</td>
+              <td>checkers::Board::jump_moves</td>
+              <td></td>
+              <td></td>
+              <td>4.9%</td>
+              <td>core..slice..iter</td>
+          </tr>
+          <tr>
+              <td></td>
+              <td>4.3%</td>
+              <td>minimax::evaluation2</td>
+              <td></td>
+              <td></td>
+              <td>4.4%</td>
+              <td>minimax::evaluation2</td>
+          </tr>
+          <tr>
+              <td></td>
+              <td></td>
+              <td></td>
+              <td></td>
+              <td></td>
+              <td></td>
+              <td></td>
+          </tr>
+          <tr>
+              <td>D=6, E=2, Q</td>
+              <td>6.1%</td>
+              <td>checkers::Board::jump_moves</td>
+              <td></td>
+              <td>D=8, E=3</td>
+              <td>18.0%</td>
+              <td>minimax::evaluation3</td>
+          </tr>
+          <tr>
+              <td></td>
+              <td>5.8%</td>
+              <td>checkers::Board::jump_moves_at</td>
+              <td></td>
+              <td></td>
+              <td>11.0%</td>
+              <td>core..slice..iter</td>
+          </tr>
+          <tr>
+              <td></td>
+              <td>5.2%</td>
+              <td>memmove</td>
+              <td></td>
+              <td></td>
+              <td>5.2%</td>
+              <td>checkers::Board::jump_moves_at</td>
+          </tr>
+          <tr>
+              <td></td>
+              <td>4.9%</td>
+              <td>minimax::evaluation2</td>
+              <td></td>
+              <td></td>
+              <td>4.3%</td>
+              <td>checkers::Board::jump_moves</td>
+          </tr>
+          <tr>
+              <td></td>
+              <td>4.6%</td>
+              <td>core..slice..iter 1</td>
+              <td></td>
+              <td></td>
+              <td>3.7%</td>
+              <td>checkers::Board::get</td>
+          </tr>
+          <tr>
+              <td></td>
+              <td>4.6%</td>
+              <td>core..slice..iter 2</td>
+              <td></td>
+              <td></td>
+              <td>3.5%</td>
+              <td>memmove</td>
+          </tr>
+          <tr>
+              <td></td>
+              <td>4.0%</td>
+              <td>checkers::Board::simple_moves</td>
+              <td></td>
+              <td></td>
+              <td>3.5%</td>
+              <td>checkers::Board::simple_moves</td>
+          </tr>
+          <tr>
+              <td></td>
+              <td></td>
+              <td></td>
+              <td></td>
+              <td></td>
+              <td></td>
+              <td></td>
+          </tr>
+          <tr>
+              <td>D=6, E=3</td>
+              <td>23.0%</td>
+              <td>minimax::evaluation3</td>
+              <td></td>
+              <td>D=8, E=3, Q</td>
+              <td>15.0%</td>
+              <td>minimax::evaluation3</td>
+          </tr>
+          <tr>
+              <td></td>
+              <td>8.8%</td>
+              <td>core..slice..iter</td>
+              <td></td>
+              <td></td>
+              <td>9.5%</td>
+              <td>core..slice..iter</td>
+          </tr>
+          <tr>
+              <td></td>
+              <td>5.1%</td>
+              <td>checkers::Board::jump_moves_at</td>
+              <td></td>
+              <td></td>
+              <td>5.8%</td>
+              <td>memmove</td>
+          </tr>
+          <tr>
+              <td></td>
+              <td>4.2%</td>
+              <td>checkers::Board::simple_moves</td>
+              <td></td>
+              <td></td>
+              <td>4.7%</td>
+              <td>checkers::Board::jump_moves_at</td>
+          </tr>
+          <tr>
+              <td></td>
+              <td>4.2%</td>
+              <td>checkers::Board::get</td>
+              <td></td>
+              <td></td>
+              <td>4.3%</td>
+              <td>checkers::Board::jump_moves</td>
+          </tr>
+          <tr>
+              <td></td>
+              <td>3.4%</td>
+              <td>memmove</td>
+              <td></td>
+              <td></td>
+              <td>3.5%</td>
+              <td>checkers::Board::simple_moves</td>
+          </tr>
+          <tr>
+              <td></td>
+              <td>3.1%</td>
+              <td>checkers::Board::jump_moves</td>
+              <td></td>
+              <td></td>
+              <td>3.5%</td>
+              <td>checkers::Board::get</td>
+          </tr>
+          </table>
+          <figcaption>Table 2: Runtime performance of the engine against the Random Opponent.</figcaption>
+        </figure>
+        <p>
+          All configurations in Table 2 have Alpha-Beta Pruning and Transposition Tables enabled. Given that they all
+          have
+          those features enabled, the configuration shorthand for those features is omitted.
+        </p>
+        <p>
+          "memmove" is a function call to "memcpy" which is part of the C standard library. This function copies memory
+          from
+          one location to another.
+        </p>
+        <p>
+          Function calls that start with "core" are either primitives of the Rust programming language, or they are
+          function
+          calls to standard library functions in the Rust programming language.
+        </p>
+        <p>
+          The first noticeable piece of information in this data is that move generation takes up a large portion of
+          time
+          in
+          most configurations. On average, move generation accounts for about 15% of the runtime.
+        </p>
+        <p>In configurations that use evaluation function v3, the evaluation function call dominates the runtime. In
+          these
+          configurations, we also see a significant increase in the runtime usage of "checkers::Board::get" and
+          "core..slice..iter". The function call to "checkers::Board::get" retrieves an element from the board's padded
+          array. The function call to "core..slice..iter" is related to iterators in Rust, which is a mechanism to
+          iterate
+          over various data structures in the Rust programming language. The evaluation function v3 accesses the
+          elements
+          of
+          the board a lot more than the other evaluation functions.
+        </p>
+      </article>
+      <article>
+        <h3>4.3 Engine vs Engine</h3>
+
+        <figure>
+          <table>
+            <tr>
+              <td></td>
+              <th>Player</th>
+              <th>Configuration</th>
+              <th>Outcome</th>
+              <th>Moves</th>
+              <th>Explored</th>
+              <th>Beta Cuts</th>
+              <th>TT Exact</th>
+              <th>TT Cuts</th>
+              <th>Max Depth</th>
+          </tr>
+          <tr>
+              <th>Game 1</th>
+              <td>Player 1</td>
+              <td>AB, TT, D=6, E=1</td>
+              <td>draw</td>
+              <td>59</td>
+              <td>32829</td>
+              <td>6992</td>
+              <td>166</td>
+              <td>1604</td>
+              <td>6</td>
+          </tr>
+          <tr>
+              <td></td>
+              <td>Player 2</td>
+              <td>AB, TT, D=6, E=2</td>
+              <td>draw</td>
+              <td>59</td>
+              <td>80357</td>
+              <td>21627</td>
+              <td>915</td>
+              <td>6802</td>
+              <td>6</td>
+          </tr>
+          <tr>
+              <td></td>
+              <td></td>
+              <td></td>
+              <td></td>
+              <td></td>
+              <td></td>
+              <td></td>
+              <td></td>
+              <td></td>
+              <td></td>
+          </tr>
+          <tr>
+              <th>Game 2</th>
+              <td>Player 1</td>
+              <td>AB, TT, D=6, E=1</td>
+              <td>draw</td>
+              <td>51</td>
+              <td>27578</td>
+              <td>6568</td>
+              <td>128</td>
+              <td>1491</td>
+              <td>6</td>
+          </tr>
+          <tr>
+              <td></td>
+              <td>Player 2</td>
+              <td>AB, TT, D=6, E=3</td>
+              <td>draw</td>
+              <td>51</td>
+              <td>72139</td>
+              <td>17868</td>
+              <td>1233</td>
+              <td>4984</td>
+              <td>6</td>
+          </tr>
+          <tr>
+              <td></td>
+              <td></td>
+              <td></td>
+              <td></td>
+              <td></td>
+              <td></td>
+              <td></td>
+              <td></td>
+              <td></td>
+              <td></td>
+          </tr>
+          <tr>
+              <th>Game 3</th>
+              <td>Player 1</td>
+              <td>AB, TT, D=6, E=1</td>
+              <td>lose</td>
+              <td>37</td>
+              <td>35451</td>
+              <td>6879</td>
+              <td>86</td>
+              <td>1158</td>
+              <td>6</td>
+          </tr>
+          <tr>
+              <td></td>
+              <td>Player 2</td>
+              <td>AB, TT, D=7, E=3</td>
+              <td>win</td>
+              <td>37</td>
+              <td>369277</td>
+              <td>62292</td>
+              <td>3607</td>
+              <td>20527</td>
+              <td>7</td>
+          </tr>
+          <tr>
+              <td></td>
+              <td></td>
+              <td></td>
+              <td></td>
+              <td></td>
+              <td></td>
+              <td></td>
+              <td></td>
+              <td></td>
+              <td></td>
+          </tr>
+          <tr>
+              <th>Game 4</th>
+              <td>Player 1</td>
+              <td>AB, TT, D=8, E=1</td>
+              <td>lose</td>
+              <td>36</td>
+              <td>151394</td>
+              <td>36049</td>
+              <td>390</td>
+              <td>10281</td>
+              <td>8</td>
+          </tr>
+          <tr>
+              <td></td>
+              <td>Player 2</td>
+              <td>AB, TT, D=7, E=3</td>
+              <td>win</td>
+              <td>36</td>
+              <td>345646</td>
+              <td>60726</td>
+              <td>3801</td>
+              <td>21279</td>
+              <td>7</td>
+          </tr>
+          <tr>
+              <td></td>
+              <td></td>
+              <td></td>
+              <td></td>
+              <td></td>
+              <td></td>
+              <td></td>
+              <td></td>
+              <td></td>
+              <td></td>
+          </tr>
+          <tr>
+              <th>Game 5</th>
+              <td>Player 1</td>
+              <td class="highlight-purple">AB, TT, Q, D=8, E=1</td>
+              <td>lose</td>
+              <td>56</td>
+              <td>224904</td>
+              <td>69309</td>
+              <td>990</td>
+              <td>17034</td>
+              <td class="highlight-purple">15</td>
+          </tr>
+          <tr>
+              <td></td>
+              <td>Player 2</td>
+              <td>AB, TT, D=7, E=3</td>
+              <td>win</td>
+              <td>56</td>
+              <td>399174</td>
+              <td>71948</td>
+              <td>5225</td>
+              <td>25316</td>
+              <td>7</td>
+          </tr>
+          <tr>
+              <td></td>
+              <td></td>
+              <td></td>
+              <td></td>
+              <td></td>
+              <td></td>
+              <td></td>
+              <td></td>
+              <td></td>
+              <td></td>
+          </tr>
+          <tr>
+              <th>Game 6</th>
+              <td>Player 1</td>
+              <td>AB, TT, D=6, E=1</td>
+              <td class="highlight-green">win</td>
+              <td>30</td>
+              <td>2153</td>
+              <td>6293</td>
+              <td>56</td>
+              <td>1647</td>
+              <td>6</td>
+          </tr>
+          <tr>
+              <td></td>
+              <td>Player 2</td>
+              <td class="highlight-green">AB, TT, D=3, E=3</td>
+              <td>lose</td>
+              <td>29</td>
+              <td>231</td>
+              <td>31</td>
+              <td>0</td>
+              <td>0</td>
+              <td>3</td>
+          </tr>
+          <tr>
+              <td></td>
+              <td></td>
+              <td></td>
+              <td></td>
+              <td></td>
+              <td></td>
+              <td></td>
+              <td></td>
+              <td></td>
+              <td></td>
+          </tr>
+          <tr>
+              <th>Game 7</th>
+              <td>Player 1</td>
+              <td>AB, TT, D=3, E=3</td>
+              <td>draw</td>
+              <td>60</td>
+              <td>5322</td>
+              <td>672</td>
+              <td>23</td>
+              <td>1</td>
+              <td>3</td>
+          </tr>
+          <tr>
+              <td></td>
+              <td>Player 2</td>
+              <td>AB, TT, D=6, E=1</td>
+              <td>draw</td>
+              <td>60</td>
+              <td>52143</td>
+              <td>15884</td>
+              <td>223</td>
+              <td>6558</td>
+              <td>6</td>
+          </tr>
+          <tr>
+              <td></td>
+              <td></td>
+              <td></td>
+              <td></td>
+              <td></td>
+              <td></td>
+              <td></td>
+              <td></td>
+              <td></td>
+              <td></td>
+          </tr>
+          <tr>
+              <th>Game 8</th>
+              <td>Player 1</td>
+              <td>AB, TT, D=6, E=1</td>
+              <td>draw</td>
+              <td>60</td>
+              <td>34926</td>
+              <td>7972</td>
+              <td>194</td>
+              <td>2346</td>
+              <td>6</td>
+          </tr>
+          <tr>
+              <td></td>
+              <td>Player 2</td>
+              <td>AB, TT, Q, D=3, E=3</td>
+              <td>draw</td>
+              <td>60</td>
+              <td>7078</td>
+              <td>1666</td>
+              <td>49</td>
+              <td>165</td>
+              <td>11</td>
+          </tr>
+          <tr>
+              <td></td>
+              <td></td>
+              <td></td>
+              <td></td>
+              <td></td>
+              <td></td>
+              <td></td>
+              <td></td>
+              <td></td>
+              <td></td>
+          </tr>
+          <tr>
+              <th>Game 9</th>
+              <td>Player 1</td>
+              <td class="highlight">AB, TT, D=12, E=1</td>
+              <td class="highlight">draw</td>
+              <td class="highlight">62</td>
+              <td class="highlight">466120</td>
+              <td class="highlight">796066</td>
+              <td class="highlight">10827</td>
+              <td class="highlight">500318</td>
+              <td class="highlight">12</td>
+          </tr>
+          <tr>
+              <td></td>
+              <td>Player 2</td>
+              <td class="highlight">AB, TT, D=6, E=3</td>
+              <td class="highlight">draw</td>
+              <td class="highlight">62</td>
+              <td class="highlight">11612</td>
+              <td class="highlight">30824</td>
+              <td class="highlight">1821</td>
+              <td class="highlight">1435</td>
+              <td class="highlight">6</td>
+          </tr>
+          </table>
+          <figcaption>Table 3: Outcome of the engine playing other configurations of the engine.</figcaption>
+        </figure>
+        <p>
+          Marked in <span class="highlight-purple">purple</span>, "AB, TT, Q, D=8, E=1" hit a max depth of 15, yet it still lost to and explored less nodes
+          than
+          "AB, TT, D=7, E=3".
+        </p>
+        <p>
+          Marked in <span class="highlight-green">green</span>, "AB, TT, D=6, E=1" vs "AB, TT, D=3, E=3" is where we see the v1 evaluation function beat the
+          v3
+          evaluation function. At a depth of 3, "AB, TT, D=3, E=3" did not explore many nodes. It's not surprising that
+          this
+          configuration lost to "AB, TT, D=6, E=1".
+        </p>
+        <p>
+          Marked in <span class="highlight">yellow</span>, "AB, TT, D=12, E=1" vs "AB, TT, D=6, E=3" ends in a draw. This configuration was picked to
+          see
+          if exploring a lot more nodes was the reason for v1 evaluation functions win in the previously discussed
+          configuration. It seems that the answer is no. "AB, TT, D=12, E=1" explores over 40 times more nodes than "AB,
+          TT,
+          D=6, E=3", but it's not enough to find a win.
+        </p>
+      </article>
+      <article>
+        <h3>4.4 Playing Against a Human</h3>
+        <p>
+          The most noticeable difference in play against the Checkers engine is when using different evaluation
+          functions.
+          All evaluation functions have an ability to find great moves in the opening states of the game. As the game
+          progresses, the v1 and v2 evaluation functions begin to make undesirable moves. The v3 evaluation function
+          continues to make good moves, especially when it comes to forcing the opponent to make a capture which puts
+          the
+          engine in a position to make a multi-capture move. All evaluation functions fail to find good moves near the
+          end
+          of the game. It was common for the engine to move one piece back and forth at the end of the game until the
+          opponent forces a different move via threat of capture or force of capture. If the v2 and v3 evaluation
+          functions
+          remove enough pieces from their opponent at the start of the game, they are good enough to force the opponent
+          into
+          a draw, but not good enough to force a win.
+        </p>
+      </article>
+    </article>
+
+    <article>
+      <h2>5. Future Enhancements</h2>
+      <article>
+        <h3>5.1 Bitboards</h3>
+        <p>
+          The slowest aspects of the engine (move generation and evaluation function) have a lot to do with the
+          underlying
+          data structure that is used (a padded array). Bitboards are an extremely common solution to this performance
+          bottleneck. The idea of a bitboard is to codify positions of pieces into the bits of unsigned 32-bit integers.
+          Then, using bitwise operators, you can generate moves or evaluate board positions in an evaluation function.
+          The
+          performance gain comes from using bitwise operators to find whole-board information instead of iterating
+          through
+          each item of an array [7].
+        </p>
+      </article>
+      <article>
+        <h3>5.2 ML Evaluation Function</h3>
+        <p>
+          Fine tuning an evaluation function by hand is difficult and time consuming. There are many more metrics even
+          beyond the ones I employed that could have been used to improve the linear combination of the most advanced
+          evaluation function currently in the engine. However, the best Checkers engines today use Machine Learning to
+          generate superior evaluation functions [3]. So for a future iteration of this project, I would replace the
+          current
+          evaluation functions with Machine Learning generated evaluation functions because it would perform much better
+          than any hand-tuned evaluation function I could create.
+        </p>
+      </article>
+      <article>
+        <h3>5.3 MTD(f) and BNS</h3>
+        <p>
+          As seen with Alpha-Beta Pruning and Transposition Tables, smaller search windows allow you to search deeper
+          and
+          faster. Two modern optimizations to Minimax searching are MTD(f) [10] and BNS [13]. They can enable the engine
+          to
+          search much deeper without too much change to the Minimax algorithm. Both algorithms utilize previous search
+          results to inform the current search with regards to shrinking the search window.
+        </p>
+      </article>
+    </article>
+    <article>
+      <h2>6. Discussion</h2>
+      <p>
+        Based on my qualitative analysis of my Checkers engine, I was able to draw the following conclusions:
+      </p>
+      <p>
+      <ul>
+        <li>The evaluation function is the most important aspect of the Minimax algorithm for winning games. Table 3
+          showed
+          that the v3 evaluation function was capable of beating the v1 evaluation function even when the v1 evaluation
+          function searches 40 times the amount of nodes.</li>
+        <li>Alpha-Beta pruning is the biggest optimization to the base Minimax algorithm. Table 1 showed that the
+          biggest leap
+          in performance came from adding Alpha-Beta pruning.</li>
+        <li>Transposition Tables gain more relevance to performance optimization when the evaluation function grows in
+          time
+          complexity. Table 1 showed that transposition tables started optimizing time better than Alpha-Beta pruning
+          alone.
+          This was because the time to run the evaluation function increased.</li>
+        <li>The underlying data structure for storing the board state has the biggest impact on performance of move
+          generation
+          and the evaluation function. Table 3 showed that there is consistently a large amount of time spent iterating
+          and
+          retrieving information from the padded array data structure.</li>
+      </ul>
+      </p>
+    </article>
+
+    <article>
+      <h1>References</h1>
+      <p>
+      <ol>
+        <li>"Chinook". University of Alberta. <a
+            href="http://webdocs.cs.ualberta.ca/~chinook/project/">http://webdocs.cs.ualberta.ca/~chinook/project/</a>
+        </li>
+        <li>Fierz, Martin. "Checkers News". The Homepage of Martin Fierz. <a
+            href="http://www.fierz.ch/checkers.htm">http://www.fierz.ch/checkers.htm</a></li>
+        <li>Fierz, Martin. "Making of - Cake 1.86-1.89". The Homepage of Martin Fierz. <a
+            href="http://www.fierz.ch/cake186.php">http://www.fierz.ch/cake186.php</a>
+        </li>
+        <li>Gilbert, Ed. "KingsRow". <a
+            href="http://edgilbert.org/Checkers/KingsRow.htm">http://edgilbert.org/Checkers/KingsRow.htm</a></li>
+        <li>Heineman, G. T., Pollice, G., & Selkow, S. (2016). Algorithms in a nutshell. O'reilly, Cop.</li>
+        <li>hyperfine. GitHub. <a href="https://github.com/sharkdp/hyperfine">https://github.com/sharkdp/hyperfine</a>
+        </li>
+        <li>Kreuzer, Jonathan. "Checker Bitboards Tutorial". 3D Kingdoms. <a
+            href="https://3dkingdoms.com/checkers/bitboards.htm">https://3dkingdoms.com/checkers/bitboards.htm</a>
+        </li>
+        <li>Marsland, T. (1986). A Review of Game-Tree Pruning. ICGA Journal.</li>
+        <li>Peterson, Robert. <a
+            href="https://github.com/rawburt/checkers-redux">https://github.com/rawburt/checkers-redux</a></li>
+        <li>Plaat, Aske. "MTD(f)". <a
+            href="https://people.csail.mit.edu/plaat/mtdf.html">https://people.csail.mit.edu/plaat/mtdf.html</a></li>
+        <li>"RULES OF THE GAME." International Draughts Federation. <a
+            href="https://idf64.org/rules-of-the-game/">https://idf64.org/rules-of-the-game/</a></li>
+        <li>Russell, S., & Norvig, P. (2010). Artificial Intelligence: A Modern Approach (3rd ed.). Pearson.</li>
+        <li>RUTKO, D. (2012). FUZZIFIED GAME TREE SEARCH.</li>
+        <li>Samuel, A. L. (1959). Some Studies in Machine Learning Using the Game of Checkers. IBM Journal of Research
+          and Development, 3(3), 210-229.</li>
+        <li>speedscope. (n.d.). <a href="https://www.speedscope.app/">https://www.speedscope.app/</a></li>
+        <li>Xcode - Features. (n.d.). Apple Developer. <a
+            href="https://developer.apple.com/xcode/features/">https://developer.apple.com/xcode/features/</a></li>
+        <li>Zobrist, A. L. (1990). A New Hashing Method with Application for Game Playing. ICGA Journal, 13(2), 69-73.
+        </li>
+      </ol>
+      </p>
+    </article>
+  </main>
+</body>
+
+</html>
