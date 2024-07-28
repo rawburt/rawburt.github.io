@@ -3,10 +3,12 @@ body {
     color: #333;
     margin: 0;
     padding: 0;
+    font-family: "Charter", "Georgia", "Times New Roman", serif;
+    font-size: 20px;
 }
 
 a {
-    color: #9a0000;
+    color: #990000;
 }
 
 header nav {
@@ -77,9 +79,21 @@ table td {
     background-color: #fdf2d0;
 }
 
-@media only screen and (max-width: 600px) {
+@media only screen and (max-width: 1300px) {
     header pre {
-        font-size: 0.38em;
+        font-size: 12px;
+        line-height: normal;
+    }
+}
+
+@media only screen and (max-width: 600px) {
+    body {
+        font-size: 14px;
+        line-height: normal;
+    }
+
+    header pre {
+        font-size: 5px;
     }
 
     header nav {
