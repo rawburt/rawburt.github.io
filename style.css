@@ -1,14 +1,26 @@
-body {
-    background-color: #efefef;
-    color: #333;
-    margin: 0;
-    padding: 0;
-    font-family: "Charter", "Georgia", "Times New Roman", serif;
-    font-size: 20px;
+* {
+    font-family: monospace, "Courier New", Courier;
+    font-size: 13px;
+    color: black;
+    background: white;
 }
-
 a {
-    color: #990000;
+    color: blue;
+}
+a:hover {
+    background: blue;
+    color: white;
+}
+figure a:hover {
+    background: none;
+}
+nav,
+main {
+    padding-left: 62px;
+}
+cite {
+    padding-left: 13px;
+    font-size: 12px;
 }
 
 header nav {
